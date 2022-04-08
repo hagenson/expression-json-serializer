@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace Aq.ExpressionJsonSerializer
 {
@@ -11,19 +13,26 @@ namespace Aq.ExpressionJsonSerializer
         public static void Serialize(
             JsonWriter writer,
             JsonSerializer serializer,
-            Expression expression)
+            PropertyNames properties,
+            Expression expression,
+            bool nestedTypes)
         {
-            var s = new Serializer(writer, serializer);
+            var s = new Serializer(writer, serializer, properties, nestedTypes);
             s.ExpressionInternal(expression);
         }
 
         private readonly JsonWriter _writer;
         private readonly JsonSerializer _serializer;
+        private readonly PropertyNames _properties;
+        private readonly bool _nestedTypes;
 
-        private Serializer(JsonWriter writer, JsonSerializer serializer)
+        private Serializer(JsonWriter writer, JsonSerializer serializer,
+            PropertyNames properties, bool nestedTypes)
         {
             this._writer = writer;
             this._serializer = serializer;
+            this._properties = properties;
+            this._nestedTypes = nestedTypes;
         }
 
         private Action Serialize(object value, System.Type type)
@@ -32,7 +41,7 @@ namespace Aq.ExpressionJsonSerializer
         }
 
         private void Prop(string name, bool value)
-        {
+        {            
             this._writer.WritePropertyName(name);
             this._writer.WriteValue(value);
         }
@@ -102,8 +111,8 @@ namespace Aq.ExpressionJsonSerializer
 
             this._writer.WriteStartObject();
 
-            this.Prop("nodeType", this.Enum(expression.NodeType));
-            this.Prop("type", this.Type(expression.Type));
+            this.Prop(_properties.NodeType, this.Enum(expression.NodeType));
+            this.Prop(_properties.Type, this.Type(expression.Type));
 
             if (this.BinaryExpression(expression)) { goto end; }
             if (this.BlockExpression(expression)) { goto end; }
